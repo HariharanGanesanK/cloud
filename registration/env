@@ -1,0 +1,15 @@
+ADMIN_EMAIL=chandhiralekamoorthy@gmail.com
+ADMIN_PASS=kxkv bqlk ysze lfta
+
+SMTP_HOST=smtp.gmail.com
+SMTP_PORT=587
+SMTP_USER=chandhiralekamoorthy@gmail.com
+SMTP_PASS=kxkv bqlk ysze lfta
+
+POSTGRES_HOST=your_postgres_host
+POSTGRES_DB=your_db_name
+POSTGRES_USER=postgres
+POSTGRES_PASSWORD=your_password
+
+MQTT_BROKER=broker.yourdomain.com
+MQTT_PORT=1883
