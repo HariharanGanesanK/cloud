@@ -22,7 +22,7 @@ logging.basicConfig(
 logger = logging.getLogger(__name__)
 
 # ---------------- APP INIT ----------------
-app = FastAPI(title="User Registration Backend", version="1.2.1")
+app = FastAPI(title="User Registration Backend", version="1.2.3")
 
 app.add_middleware(
     CORSMiddleware,
@@ -43,9 +43,11 @@ class RegisterRequest(BaseModel):
     password: str
     mail: Optional[str] = None
 
+
 class OTPVerifyRequest(BaseModel):
     otp: str
     registration_data: RegisterRequest
+
 
 # ---------------- DATABASE CONNECTION ----------------
 def get_connection():
@@ -60,8 +62,10 @@ def get_connection():
         logger.error(f"❌ Database connection failed: {e}")
         raise HTTPException(status_code=500, detail="Database connection failed")
 
+
 # ---------------- GLOBAL OTP STORE ----------------
 otp_store = {}
+
 
 # ---------------- UTILS ----------------
 def generate_user_id(role, company_name, branch):
@@ -82,26 +86,29 @@ def generate_user_id(role, company_name, branch):
     next_num = (max(nums) + 1) if nums else 1
     return f"{prefix}{next_num:03d}"
 
+
 # ---------------- ROUTES ----------------
 @app.post("/register")
 def register_user(data: RegisterRequest):
     logger.info(f"📩 Received registration request for: {data.name} ({data.role})")
 
+    # 1️⃣ Generate OTP
     otp = str(random.randint(1000, 9999))
     otp_store[data.device_unique_id] = otp
 
+    # 2️⃣ Get approvers
     conn = get_connection()
     cur = conn.cursor()
-
     role_sets = get_roles_for_otp(data.branch)
 
-    # --- Business approvers (all branches) ---
     business_roles = role_sets["business"]["roles"]
     business_placeholders = ','.join(['%s'] * len(business_roles))
     cur.execute(f"SELECT mail FROM user_data WHERE UPPER(role) IN ({business_placeholders})", business_roles)
-    business_mails = [r[0] for r in cur.fetchall() if r[0]]
+    business_mails = [
+        r[0] for r in cur.fetchall()
+        if r[0] and str(r[0]).strip().lower() != "none"
+    ]
 
-    # --- IT approvers ---
     it_roles = role_sets["it"]["roles"]
     it_placeholders = ','.join(['%s'] * len(it_roles))
     if role_sets["it"]["branch_restricted"]:
@@ -112,25 +119,48 @@ def register_user(data: RegisterRequest):
     else:
         cur.execute(f"SELECT mail FROM user_data WHERE UPPER(role) IN ({it_placeholders})", it_roles)
 
-    it_mails = [r[0] for r in cur.fetchall() if r[0]]
+    it_mails = [
+        r[0] for r in cur.fetchall()
+        if r[0] and str(r[0]).strip().lower() != "none"
+    ]
 
     cur.close()
     conn.close()
 
     all_recipients = list(set(business_mails + it_mails))
-    logger.info(f"👔 OTP will be sent to: {all_recipients}")
+    logger.info(f"👔 Approver emails: {all_recipients}")
 
-    # --- Prepare structured mail content ---
+    if not all_recipients:
+        logger.warning("⚠️ No valid approver emails found. Skipping mail send.")
+        return {"message": "No approver emails found. Registration pending manual review."}
+
+    # Mail content
+    user_data = {
+        "name": data.name,
+        "role": data.role,
+        "otp": otp
+    }
+
+    # 2️⃣ Send OTP to approvers
     for mail in all_recipients:
-        user_data = {
-            "name": data.name,
-            "role": data.role,
-            "otp": otp
-        }
-        send_mail(mail, "🔐 New User Registration OTP", user_data)
+        send_mail(mail, "🔐 New User Registration OTP (Approval Required)", user_data)
+    logger.info(f"✅ OTP sent to approvers: {all_recipients}")
 
-    return {"message": "OTP sent to approvers", "status": "pending"}
+    # 6️⃣ Send OTP to user if email exists
+    if data.mail and str(data.mail).strip().lower() != "none":
+        send_mail(data.mail, "🔐 Your Registration OTP", user_data)
+        logger.info(f"📧 OTP also sent to user: {data.mail}")
+    else:
+        logger.info("ℹ️ No valid user email provided, skipping user OTP mail.")
 
+    # 3️⃣ Respond to frontend (keep simple output)
+    return {
+        "message": "OTP sent to approvers",
+        "status": "pending"
+    }
+
+
+# ---------------- VERIFY OTP ----------------
 @app.post("/verify_otp")
 def verify_otp(req: OTPVerifyRequest):
     device_id = req.registration_data.device_unique_id
@@ -168,6 +198,8 @@ def verify_otp(req: OTPVerifyRequest):
     otp_store.pop(device_id, None)
     return {"message": "User registered successfully", "user_id": user_id}
 
+
+# ---------------- GET USERS ----------------
 @app.get("/users")
 def get_all_users():
     conn = get_connection()
@@ -180,6 +212,8 @@ def get_all_users():
     conn.close()
     return {"total_users": len(users), "users": users}
 
+
+# ---------------- STARTUP ----------------
 @app.on_event("startup")
 def startup_event():
     logger.info("🚀 FastAPI server started on uvicorn main:app --host 0.0.0.0 --port 9000")

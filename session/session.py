@@ -26,7 +26,7 @@ app = FastAPI()
 DB_CONFIG = {
     "host": "localhost",
     "database": "jlmill",
-    "user": "hari",
+    "user": "kaai",
     "password": "yourpassword"
 }
 

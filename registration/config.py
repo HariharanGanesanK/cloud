@@ -1,6 +1,6 @@
 # Database credentials
 DB_NAME = "jlmill"
-DB_USER = "hari"
+DB_USER = "kaai"
 DB_PASSWORD = "yourpassword"
 DB_HOST = "localhost"
 DB_PORT = 5432

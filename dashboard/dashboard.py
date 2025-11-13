@@ -19,7 +19,7 @@ DB_USER = "kaai"
 DB_PASS = "yourpassword"
 
 # Image folder
-IMAGE_DIR = "/opt/vchanel/fastback/cam1_app/detected_frames"
+IMAGE_DIR = "/opt/vchanel/fastback/cam1_app_1/detected_frames"
 if os.path.exists(IMAGE_DIR):
     app.mount("/images", StaticFiles(directory=IMAGE_DIR), name="images")
 
@@ -88,7 +88,7 @@ def fetch_data_from_postgres():
                         "bale": r["bale_count"],
                         "bag": r["bag_count"],
                         "trolley": r["trolley_count"],
-                        "imageUrl": f"http://192.168.1.7:8003/images/{filename}" if filename else None
+                        "imageUrl": f"http://192.168.1.7:9020/images/{filename}" if filename else None
                     })
                 return data
     except Exception as e:
@@ -133,7 +133,7 @@ def fetch_latest_transaction():
                     "bale": record["bale_count"],
                     "bag": record["bag_count"],
                     "trolley": record["trolley_count"],
-                    "imageUrl": f"http://192.168.1.7:8003/images/{filename}" if filename else None
+                    "imageUrl": f"http://192.168.1.7:9020/images/{filename}" if filename else None
                 }
     except Exception as e:
         print("❌ Database Error:", e)
@@ -178,7 +178,7 @@ async def fetch_today_transactions():
                         "bale": r["bale_count"],
                         "bag": r["bag_count"],
                         "trolley": r["trolley_count"],
-                        "imageUrl": f"http://192.168.1.7:8003/images/{filename}" if filename else None
+                        "imageUrl": f"http://192.168.1.7:9020/images/{filename}" if filename else None
                     })
                 return data
     except Exception as e:
@@ -399,7 +399,7 @@ async def fetch_data_grouped():
 #                         "bale": r["bale_count"],
 #                         "bag": r["bag_count"],
 #                         "trolley": r["trolley_count"],
-#                         "imageUrl": f"http://192.168.1.7:8003/images/{filename}" if filename else None
+#                         "imageUrl": f"http://192.168.1.7:9020/images/{filename}" if filename else None
 #                     })
 #                 return data
 #     except Exception as e:
